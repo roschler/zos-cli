@@ -1,5 +1,3 @@
-node_modules
 zos*
 build
-lib
 .node-xmlhttprequest-sync-*
