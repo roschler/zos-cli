@@ -1,0 +1,25 @@
+# General notes while exploring the ZOS-CLI code base.
+
+There is a lengthy chain of events that takes place when a contract is deployed.  They are hard to trace because there are several abstracted interfaces around and async calls.  However, much of the interaction between a contract, which is dynamically loaded from the "build/contracts" directory in JSON format, and the target network happens in "contract.js".  In this file you will find the methods that talk to the target network.  Look for methods named "send*()" and for those methods you will find in the "_static_methods" section of the contract details.
+
+Call flow notes for contract deployments:
+
+# The code shown below is triggered on the way to the "new()" method being called off of a dynamically loaded ZOS contract.  It creates a clone of the desired contract type and initializes the object.   It s found in the "index.js" file for the "truffle-contract" package in the ZOS-CLI node_modules directory tree.
+
+    FILE: (truffle-contract)->index.js
+
+    // Note we don't use `new` here at all. This will cause the class to
+    // "mutate" instead of instantiate an instance.
+    return Contract.clone(binary);
+
+# Work is facilitated with a Web3 instance.  Look for code like this in "contract.js":
+
+    temp.web3 = new Web3();
+
+# After the above prequel the "new()" method found in "contract.js" is triggered, which represents a Truffle contract, is finally called.
+
+# There is some activity in another "contract.js" file that belongs to the "web3" package in the ZOS-CLI node_modules directory.  It appears to have its own "new()" method that is triggered by the "truffle-contract" new method.
+
+RESOLUTION: The "truffle-contract -> contract.js" file does some transactions with the "web3" but it is really the "web3" PACKAGE that does the actual contract deployment.  It's the calls made by the "contract.js" code in the "web3" PACKAGE using "eth" interface it maintains that does the ACTUAL RPC call to the network to deploy the contract:
+
+    this.eth.sendTransaction()
